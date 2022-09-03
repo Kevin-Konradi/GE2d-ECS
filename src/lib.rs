@@ -1,14 +1,29 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use std::{path::Iter, marker::PhantomData};
+
+trait System {
+    type SystemData;
+
+    fn run(data: Query<Self::SystemData>);
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+trait Component {}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+struct Query<T> {
+    items: dyn Iterator<Item = T>
+}
+
+impl<T> Iterator for Query<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.items.next()
     }
+}
+
+struct World {
+    systems: Vec<dyn System> 
+}
+
+struct Entity {
+
 }
