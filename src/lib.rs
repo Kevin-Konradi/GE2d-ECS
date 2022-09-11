@@ -1,14 +1,44 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use std::cell::RefCell;
+
+pub mod world;
+
+trait ComponentVec {
+    fn as_any(&self) -> &dyn std::any::Any;
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+    fn push_none(&mut self);
+}
+
+impl<T: 'static> ComponentVec for Vec<Option<T>> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+
+    fn push_none(&mut self) {
+        self.push(None)
+    }
+}
+
+impl<T: 'static> ComponentVec for RefCell<Vec<Option<T>>> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+
+    fn push_none(&mut self) {
+        self.get_mut().push(None)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    
 }
