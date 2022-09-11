@@ -1,3 +1,5 @@
+use std::cell::{RefCell, RefMut};
+
 use crate::ComponentVec;
 
 pub(crate) struct World {
@@ -22,19 +24,35 @@ impl World {
         entity_id
     }
 
-    pub fn add_component_to_entity<ComponentType: 'static> (
+    /// add a Component of `ComponentType` to a entity, represented by an `usize`
+    /// 
+    /// ## example
+    /// ```
+    /// let entity1 = 1;
+    /// let entity2 = 2;
+    /// 
+    /// #[derive(Component)]
+    /// struct Health(usize);
+    /// #[derive(Component)]
+    /// struct Name(string);
+    /// 
+    /// world.add_component_to_entity(entity1, Health(100));
+    /// world.add_component_to_entity(entity1, Name("Somebody"));
+    /// world.add_component_to_entity(entity2, Health(20));
+    /// ```
+    pub fn add_component_to_entity<T: 'static> (
         &mut self,
         entity: usize,
-        component: ComponentType
+        component: T
     ) {
         for component_vec in self.component_vecs.iter_mut() {
-            if let Some(component_vec) = component_vec.as_any_mut().downcast_mut::<Vec<Option<ComponentType>>>() {
-                component_vec[entity] = Some(component);
+            if let Some(component_vec) = component_vec.as_any_mut().downcast_mut::<RefCell<Vec<Option<T>>>>() {
+                component_vec.get_mut()[entity] = Some(component);
                 return;
             }
         }
 
-        let mut new_component_vec: Vec<Option<ComponentType>> = Vec::with_capacity(self.entities_count);
+        let mut new_component_vec: Vec<Option<T>> = Vec::with_capacity(self.entities_count);
 
         for _ in 0..self.entities_count {
             new_component_vec.push(None);
@@ -44,13 +62,50 @@ impl World {
             self.component_vecs.push(Box::new(new_component_vec));
     }
 
-    fn borrow_component_vec<ComponentType: 'static> (&self) -> Option<&Vec<Option<ComponentType>>> {
+    /// Borrow an immutable instance of `ComponentVec` to iterate over
+    /// 
+    /// ## example
+    /// ```
+    /// let data = world.borrow_component_vec::<Health>().unwrap();
+    /// for health in data.iter().filter_map(|x| x.as_ref()) {
+    ///     /* Do whatever you want here */
+    /// }
+    /// 
+    /// let zip = world.borrow_component_vec::<Health>().unwrap().iter().zip(world.borrow_component_vec::<Name>().unwrap().iter());
+    /// for (health, name) in zip.filter_map((|health, name|) {
+    ///     Some((health.as_ref()?, name.as_ref()?))
+    /// }) {
+    ///     /* Do whatever you want here */
+    /// }
+    /// ```
+    fn borrow_component_vec<T: 'static> (&self) -> Option<&Vec<Option<T>>> {
         for component_vec in self.component_vecs.iter() {
-            if let Some(component_vec) = component_vec.as_any().downcast_ref::<Vec<Option<ComponentType>>>() {
+            if let Some(component_vec) = component_vec.as_any().downcast_ref::<Vec<Option<T>>>() {
                 return Some(component_vec);
             }
         }
 
+        None
+    }
+
+    /// Borrow a mutable instance of `ComponentVec` to iterate over
+    /// 
+    /// ## example
+    /// ```
+
+    /// let zip = world.borrow_component_vec::<Health>().unwrap().iter_mut().zip(world.borrow_component_vec::<Name>().unwrap().iter_mut());
+    /// for (health, name) in zip.filter_map((|health, name|) {
+    ///     Some((health.as_mut()?, name.as_mut()?))
+    /// }) {
+    ///     /* Do whatever you want here */
+    /// }
+    /// ```
+    fn borrow_component_vec_mut<T: 'static> (&self) -> Option<RefMut<Vec<Option<T>>>> {
+        for component_vec in self.component_vecs.iter() {
+            if let Some(component_vec) = component_vec.as_any().downcast_ref::<RefCell<Vec<Option<T>>>>() {
+                return Some(component_vec.borrow_mut());
+            }
+        }
         None
     }
 }
